@@ -1,3 +1,6 @@
-from Scripts import data_setup
+from Scripts import data_setup, models
 
-data_setup.create_dataloaders()
+
+model_1 = models.TinyVGG(10, 20, 3)
+
+print(model_1) 
