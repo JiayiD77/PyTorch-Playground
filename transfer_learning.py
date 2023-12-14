@@ -13,3 +13,14 @@ train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(t
                                                                                test_dir=test_dir,
                                                                                transform=transform,
                                                                                batch_size=32)
+
+# Getting the pre-trained model from torchvision
+model = torchvision.models.efficientnet_b0(weights=weights)
+
+print("----------------------------------------------------------------")
+print("Model Architecture")
+print(model)
+print("----------------------------------------------------------------")
+print("Model Classifier")
+print(model.classifier)
+
