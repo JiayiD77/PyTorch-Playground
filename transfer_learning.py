@@ -1,51 +1,74 @@
-from Utils import data_setup
+from Utils import data_setup, engine
+
 import torch
 from torch import nn
 import torchvision
 from torchinfo import summary
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+from timeit import default_timer as timer
 
-weights = torchvision.models.EfficientNet_B0_Weights.DEFAULT
-transform = weights.transforms()
+def main():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-print(transform)
+    weights = torchvision.models.EfficientNet_B0_Weights.DEFAULT
+    transform = weights.transforms()
 
-train_dir = "Datasets/pizza_steak_sushi/train"
-test_dir = "Datasets/pizza_steak_sushi/test"
+    print(transform)
 
-train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(train_dir = train_dir,
-                                                                               test_dir=test_dir,
-                                                                               transform=transform,
-                                                                               batch_size=32)
+    train_dir = "Datasets/pizza_steak_sushi/train"
+    test_dir = "Datasets/pizza_steak_sushi/test"
 
-# Getting the pre-trained model from torchvision
-model = torchvision.models.efficientnet_b0(weights=weights).to(device)
+    train_dataloader, test_dataloader, class_names = data_setup.create_dataloaders(train_dir = train_dir,
+                                                                                test_dir=test_dir,
+                                                                                transform=transform,
+                                                                                batch_size=32)
 
-# print("----------------------------------------------------------------")
-# print("Model Architecture")
-# print(model)
-# print("----------------------------------------------------------------")
-# print("Model Classifier")
-# print(model.classifier)
+    # Getting the pre-trained model from torchvision
+    model = torchvision.models.efficientnet_b0(weights=weights).to(device)
 
-summary(model=model,
-        input_size=(1, 3, 224, 224),
-        col_names=['input_size', 'output_size', 'num_params', 'trainable'],
-        col_width=15,
-        row_settings=['var_names'])
+    # print("----------------------------------------------------------------")
+    # print("Model Architecture")
+    # print(model)
+    # print("----------------------------------------------------------------")
+    # print("Model Classifier")
+    # print(model.classifier)
 
-# Set the trained params to untrainable
-for params in model.features.parameters():
-    params.requires_grad = False
+    summary(model=model,
+            input_size=(1, 3, 224, 224),
+            col_names=['input_size', 'output_size', 'num_params', 'trainable'],
+            col_width=15,
+            row_settings=['var_names'])
 
-# Change the classifier
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
+    # Set the trained params to untrainable
+    for params in model.features.parameters():
+        params.requires_grad = False
 
-model.classifier = nn.Sequential(
-    nn.Dropout(0.2, inplace=True),
-    nn.Linear(in_features=1280, out_features=len(class_names))
-).to(device)
+    # Change the classifier
+    torch.manual_seed(42)
+    torch.cuda.manual_seed(42)
 
-print(model.classifier)
+    model.classifier = nn.Sequential(
+        nn.Dropout(0.2, inplace=True),
+        nn.Linear(in_features=1280, out_features=len(class_names))
+    ).to(device)
+
+    print(model.classifier)
+    print(f"Training on {device}.....")
+    
+    # Train the model
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    start_time = timer()
+    results = engine.train(model=model,
+                        train_dataloader=train_dataloader,
+                        test_dataloader=test_dataloader,
+                        optimizer=optimizer,
+                        loss_fn=loss_fn,
+                        epochs=10,
+                        device=device)
+    end_time = timer()
+    print(f"Total training time: {end_time-start_time:.3f} seconds")
+
+if __name__=="__main__":
+    main()
