@@ -33,18 +33,41 @@ test_data_loader = DataLoader(test_data, BATCH_SIZE, sampler=test_sampler)
 # print(f"Total test batch: {len(test_data_loader)}")
 # print(f"Total classes: {len(train_data.classes)}")
 
-embeddings_size = PATCH_SIZE**2 * 3
-conv2d_layer = nn.Conv2d(in_channels=3, 
-                         out_channels=embeddings_size,
-                         kernel_size=PATCH_SIZE,
-                         stride=PATCH_SIZE,
-                         padding=0)
-
 train_batch = next(iter(train_data_loader))
 # print(len(train_batch))
 # print(train_batch[0].shape)
 # print(train_batch[1].shape)
 
-single_image = train_batch[0][0].unsqueeze(dim=0)
-embedded_single_image = conv2d_layer(single_image)
+single_image = train_batch[0][0]
+CHANNEL, HEIGHT, WIDTH = single_image.shape
+EMBEDDING_SIZE = PATCH_SIZE**2 * 3
+
+class PatchEmbedding(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 patch_size=PATCH_SIZE,
+                 embedding_dim=EMBEDDING_SIZE):
+        super().__init__()
+        
+        self.embedding_layer = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, 
+                      out_channels=embedding_dim,
+                      kernel_size=patch_size,
+                      stride=patch_size,
+                      padding=0),
+            nn.Flatten(-2, -1)
+        )
+    
+    def forward(self, x):
+        embedded_image = self.embedding_layer(x)
+        return embedded_image.permute(0, 2, 1)
+
+
+patch_embedding = PatchEmbedding(in_channels=CHANNEL)
+embedded_single_image = patch_embedding(single_image.unsqueeze(dim=0))
+class_token = nn.Parameter(torch.rand(embedded_single_image.shape[0], 1, EMBEDDING_SIZE), requires_grad=True)
+embedded_single_image = torch.cat((class_token, embedded_single_image), dim=1)
+patch_size = int(HEIGHT * WIDTH / PATCH_SIZE**2)
+position_embedding = nn.Parameter(torch.rand(1, patch_size+1, EMBEDDING_SIZE), requires_grad=True)
+embedded_single_image = embedded_single_image + position_embedding
 print(embedded_single_image.shape)
