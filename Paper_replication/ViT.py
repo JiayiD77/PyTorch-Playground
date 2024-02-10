@@ -49,6 +49,8 @@ class PatchEmbedding(nn.Module):
                  embedding_dim=EMBEDDING_SIZE):
         super().__init__()
         
+        self.patch_size = patch_size
+        self.embedding_dim = embedding_dim
         self.embedding_layer = nn.Sequential(
             nn.Conv2d(in_channels=in_channels, 
                       out_channels=embedding_dim,
@@ -57,17 +59,29 @@ class PatchEmbedding(nn.Module):
                       padding=0),
             nn.Flatten(-2, -1)
         )
-    
+        
     def forward(self, x):
         embedded_image = self.embedding_layer(x)
-        return embedded_image.permute(0, 2, 1)
+        embedded_image = embedded_image.permute(0, 2, 1) # [B, P, D]
+        
+        # Add class embedding
+        class_token = nn.Parameter(torch.rand(x.shape[0], 1, self.embedding_dim), requires_grad=True)
+        embedded_image = torch.cat((class_token, embedded_image), dim=1)
+        
+        # Add position embedding
+        patch_size_po = int(x.shape[2] * x.shape[3] / self.patch_size**2)
+        position_embedding = nn.Parameter(torch.rand(1, patch_size_po+1, self.embedding_dim), requires_grad=True)
+        embedded_image = embedded_image + position_embedding
+        
+        return embedded_image
 
 
 patch_embedding = PatchEmbedding(in_channels=CHANNEL)
 embedded_single_image = patch_embedding(single_image.unsqueeze(dim=0))
-class_token = nn.Parameter(torch.rand(embedded_single_image.shape[0], 1, EMBEDDING_SIZE), requires_grad=True)
-embedded_single_image = torch.cat((class_token, embedded_single_image), dim=1)
-patch_size = int(HEIGHT * WIDTH / PATCH_SIZE**2)
-position_embedding = nn.Parameter(torch.rand(1, patch_size+1, EMBEDDING_SIZE), requires_grad=True)
-embedded_single_image = embedded_single_image + position_embedding
+# class_token = nn.Parameter(torch.rand(embedded_single_image.shape[0], 1, EMBEDDING_SIZE), requires_grad=True)
+# embedded_single_image = torch.cat((class_token, embedded_single_image), dim=1)
+# patch_size = int(HEIGHT * WIDTH / PATCH_SIZE**2)
+# position_embedding = nn.Parameter(torch.rand(1, patch_size+1, EMBEDDING_SIZE), requires_grad=True)
+# embedded_single_image = embedded_single_image + position_embedding
 print(embedded_single_image.shape)
+
