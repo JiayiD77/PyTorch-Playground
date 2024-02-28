@@ -84,6 +84,30 @@ embedded_single_image = patch_embedding(single_image.unsqueeze(dim=0))
 # position_embedding = nn.Parameter(torch.rand(1, patch_size+1, EMBEDDING_SIZE), requires_grad=True)
 # embedded_single_image = embedded_single_image + position_embedding
 
+print(f'Shape of image after patch embedding: {embedded_single_image.shape}') 
 
-print(embedded_single_image.shape) 
+class MultiHeadSelfAttentionBlock(nn.Module):
+    def __init__(self,
+                 embedding_dim,
+                 num_heads=12,
+                 attn_dropout=0):
+        super().__init__()   
+        
+        self.layer_norm = nn.LayerNorm(normalized_shape=embedding_dim)
+        self.multihead_attn = nn.MultiheadAttention(embed_dim=embedding_dim,
+                                                    num_heads=num_heads,
+                                                    dropout=attn_dropout,
+                                                    batch_first=True)
+        
+    def forward(self, x):
+        x = self.layer_norm(x)
+        attn_ouput, _ = self.multihead_attn(query=x,
+                                            key=x,
+                                            value=x,
+                                            need_weights=False)
+        return attn_ouput
 
+attn_block = MultiHeadSelfAttentionBlock(embedding_dim=EMBEDDING_SIZE)
+img_attn = attn_block(embedded_single_image)
+
+print(f'Shape of image after passing through attention layer: {img_attn.shape}')   
