@@ -84,5 +84,6 @@ embedded_single_image = patch_embedding(single_image.unsqueeze(dim=0))
 # position_embedding = nn.Parameter(torch.rand(1, patch_size+1, EMBEDDING_SIZE), requires_grad=True)
 # embedded_single_image = embedded_single_image + position_embedding
 
+
 print(embedded_single_image.shape) 
 
