@@ -111,3 +111,29 @@ attn_block = MultiHeadSelfAttentionBlock(embedding_dim=EMBEDDING_SIZE)
 img_attn = attn_block(embedded_single_image)
 
 print(f'Shape of image after passing through attention layer: {img_attn.shape}')   
+
+class MLP(nn.Module):
+    def __init__(self,
+                 embedding_dim,
+                 mlp_size,
+                 dropout=0.1):
+        super().__init__()
+        
+        self.layer_norm = nn.LayerNorm(normalized_shape=embedding_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(in_features=embedding_dim, out_features=mlp_size),
+            nn.GELU(),
+            nn.Dropout(p=dropout),
+            nn.Linear(in_features=mlp_size, out_features=embedding_dim),
+            nn.Dropout(p=dropout)
+        )
+    
+    def forward(self, x):
+        x = self.layer_norm(x)
+        x = self.mlp(x)
+        return x
+
+mlp = MLP(embedding_dim=EMBEDDING_SIZE, mlp_size=3072)    
+img_mlp = mlp(img_attn)
+
+print(f'Shape of image after passing through mlp: {img_mlp.shape}')  
