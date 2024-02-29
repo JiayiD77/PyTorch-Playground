@@ -137,3 +137,24 @@ mlp = MLP(embedding_dim=EMBEDDING_SIZE, mlp_size=3072)
 img_mlp = mlp(img_attn)
 
 print(f'Shape of image after passing through mlp: {img_mlp.shape}')  
+
+class TransformerEncoderBlock(nn.Module):
+    def __init__(self,
+                 embedding_dim,
+                 num_heads,
+                 attn_dropout,
+                 mlp_size,
+                 dropout):
+        super().__init__()
+        
+        self.msa_block = MultiHeadSelfAttentionBlock(embedding_dim=embedding_dim, 
+                                                     num_heads=num_heads, 
+                                                     attn_dropout=attn_dropout)
+        self.mlp_block = MLP(embedding_dim=embedding_dim, 
+                             mlp_size=mlp_size,
+                             dropout=dropout)
+    
+    def forward(self, x):
+        x = self.msa_block(x) + x
+        x = self.mlp_block(x) + x
+        return x
