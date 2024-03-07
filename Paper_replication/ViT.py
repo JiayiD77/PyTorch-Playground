@@ -158,3 +158,48 @@ class TransformerEncoderBlock(nn.Module):
         x = self.msa_block(x) + x
         x = self.mlp_block(x) + x
         return x
+    
+class ViT(nn.Module):
+    def __init__(self,
+                 in_channels:int=3,
+                 patch_size:int=16,
+                 num_transformer_layers:int=12,
+                 embedding_dim:int=768,
+                 num_heads:int=12,
+                 mlp_size:int=3072,
+                 attn_dropout:int=0,
+                 mlp_dropout:int=0.1,
+                 embedding_dropout:int=0.1,
+                 num_classes:int=1000):
+        super().__init__()
+        
+        self.patch_embedding = PatchEmbedding(in_channels=in_channels,
+                                                patch_size=patch_size,
+                                                embedding_dim=embedding_dim)
+        
+        self.embedding_dropout = nn.Dropout(embedding_dropout)
+        
+        self.encoder_block = nn.Sequential(
+            *[TransformerEncoderBlock(embedding_dim=embedding_dim,
+                                      num_heads=num_heads,
+                                      attn_dropout=attn_dropout,
+                                      mlp_size=mlp_size,
+                                      dropout=mlp_dropout) for _ in range(num_transformer_layers)]
+        )
+        
+        self.classifier = nn.Sequential(
+            nn.LayerNorm(normalized_shape=embedding_dim),
+            nn.Linear(in_features=embedding_dim,
+                      out_features=num_classes)
+        )
+        
+    def forward(self, x):
+        x = self.patch_embedding(x)
+        x = self.encoder_block(x)
+        x = self.classifier(x)
+        return x
+
+model = ViT(num_classes=10)
+print(f"Input image shape: {single_image.shape}")
+output = model(single_image.unsqueeze(dim=0))
+print(f"Output shape: {output.shape}")
